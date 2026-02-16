@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Incident AI Assistant</title>
+        <link rel="stylesheet" href="./styles.css" />
+    </head>
+    <body>
+        <main class="container">
+        <h1>Real-time Incident AI Assistant</h1>
+
+        <section class="card controls">
+            <label>
+            Incident ID
+            <input id="incidentId" value="incident-001" />
+            </label>
+            <label>
+            API Base URL
+            <input id="apiBase" value="https://incident-ai-worker.rozolennon4.workers.dev" />
+            </label>
+        </section>
+
+        <section class="card">
+            <h2>Stream logs / events</h2>
+            <textarea id="logInput" rows="8" placeholder="One event per line, e.g.&#10;api-gateway ERROR timeout upstream in 2130ms&#10;payments WARN retrying transaction tokenization"></textarea>
+            <button type="button" id="sendLogs">Stream Logs</button>
+            <p id="logStatus" class="status"></p>
+        </section>
+
+        <section class="card">
+            <h2>Ask questions</h2>
+            <div class="row">
+            <input id="question" placeholder="What changed before latency spike?" />
+            <button type="button" id="ask">Ask</button>
+            <button type="button" id="askStream">Ask (stream)</button>
+            <button type="button" id="voice">🎤 Voice</button>
+            </div>
+            <p id="askStatus" class="status"></p>
+        </section>
+
+        <section class="grid">
+            <div class="card">
+            <h2>Assistant</h2>
+            <div id="chat" class="chat"></div>
+            </div>
+            <div class="card">
+            <h2>Incident Timeline</h2>
+            <button type="button" id="refreshTimeline">Refresh Timeline</button>
+            <pre id="timeline" class="timeline"></pre>
+            </div>
+        </section>
+        </main>
+
+        <script src="./app.js" defer></script>
+    </body>
+</html>

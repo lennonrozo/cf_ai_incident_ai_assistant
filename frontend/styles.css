@@ -1,0 +1,117 @@
+:root {
+    color-scheme: light dark;
+    font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+.container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    gap: 16px;
+}
+
+h1, h2 {
+    margin: 0 0 12px 0;
+}
+
+.card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 12px;
+}
+
+label {
+    display: grid;
+    gap: 6px;
+    font-size: 14px;
+}
+
+input,
+textarea,
+button {
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: #0b1220;
+    color: #e2e8f0;
+    padding: 10px;
+}
+
+button {
+    cursor: pointer;
+    background: #1d4ed8;
+    border: none;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 8px;
+}
+
+.status {
+    font-size: 13px;
+    min-height: 18px;
+    color: #93c5fd;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.chat {
+    min-height: 280px;
+    max-height: 460px;
+    overflow: auto;
+    display: grid;
+    gap: 10px;
+}
+
+.message {
+    border-radius: 8px;
+    padding: 10px;
+    white-space: pre-wrap;
+}
+
+.message.user {
+    background: #1e293b;
+}
+
+.message.assistant {
+    background: #172554;
+}
+
+.timeline {
+    min-height: 280px;
+    max-height: 460px;
+    overflow: auto;
+    margin: 12px 0 0 0;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 900px) {
+    .controls,
+    .grid,
+    .row {
+        grid-template-columns: 1fr;
+    }
+}
