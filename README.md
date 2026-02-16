@@ -1,107 +1,122 @@
 # Real-time Incident AI Assistant on Cloudflare
 
-This repository contains a working Cloudflare AI app that helps debug production incidents in real time.
+This repository contains a Cloudflare-native AI assistant that helps debug incidents using real-time logs/events, LLM analysis, and persistent incident memory.
 
 ## Live deployment
 
 - Frontend (Pages): `https://c4b95b9b.incident-ai-assistant-ui.pages.dev`
 - API (Worker): `https://incident-ai-worker.rozolennon4.workers.dev`
 
-Cloudflare keeps this serverless app available without managing your own server.
+Cloudflare keeps this serverless app available without running your own long-lived server.
 
-## What this includes
+## High-level design
 
-- **Workers**: API + orchestration routes
-- **Durable Objects**: per-incident memory (timeline, context, chat history)
-- **Workers AI**: LLM inference using **Llama 3.3** (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`)
-- **Pages**: chat/voice frontend for log ingest + Q&A
+### Goal
 
-## Architecture
+Provide a real-time assistant for incident response that can answer questions like:
 
-1. User sends logs/events from the frontend
-2. Worker route `/api/incident/:id/logs` stores them in a Durable Object session
-3. User asks incident questions (chat or voice)
-4. Worker fetches incident context from Durable Object
-5. Worker calls Workers AI (or optional external LLM)
-6. Worker returns response (JSON or streamed SSE)
-7. Durable Object stores timeline + summaries + conversation
+- "What changed before latency spike?"
+- "Summarize errors by service"
+
+### Core components
+
+- **Cloudflare Workers**: API routes + orchestration layer.
+- **Durable Objects**: per-incident state and timeline memory.
+- **Workers AI (Llama 3.3)**: analysis and summarization of incident context.
+- **Cloudflare Pages**: chat/voice frontend.
+
+### Data flow
+
+1. User streams logs/events from the frontend to Worker API.
+2. Worker routes data to a Durable Object keyed by incident ID.
+3. Durable Object stores timeline events, summaries, and chat turns.
+4. User asks a question via chat/voice.
+5. Worker builds a prompt from incident memory and calls Workers AI (or optional external LLM).
+6. Worker returns answer (JSON or SSE stream) and writes Q&A summary back to Durable Object.
+
+### State model
+
+Each incident keeps:
+
+- Event timeline
+- Chat history
+- Rolling summaries
+- Created/updated timestamps
 
 ## Repository layout
 
-- `worker/` Cloudflare Worker + Durable Object
+- `worker/` Cloudflare Worker + Durable Object implementation
 - `frontend/` Cloudflare Pages static UI
+- `.github/workflows/deploy-cloudflare.yml` GitHub Actions auto-deploy workflow
 
 ## Prerequisites
 
 - Node.js 20+
 - `npm`
-- Cloudflare account with Workers + Workers AI access
+- Cloudflare account with Workers + Workers AI + Pages access
 - Wrangler login (`npx wrangler login`)
 
-## 1) Run Worker locally
+## Recreate from scratch (clone to production)
+
+### 1) Clone and install
+
+```bash
+git clone https://github.com/lennonrozo/cf_ai_incident_ai_assistant.git
+cd cf_ai_incident_ai_assistant
+cd worker
+npm install
+```
+
+### 2) Run locally
+
+Start backend:
 
 ```bash
 cd worker
-npm install
 npm run dev
 ```
 
-The Worker runs at `http://127.0.0.1:8787`.
-
-## 2) Run frontend locally
-
-Serve the frontend as static files (recommended), then open it in your browser:
+Start frontend (in another terminal):
 
 ```bash
 cd frontend
 npx serve .
 ```
 
-Then open the local URL printed by `serve`, set API base URL to `http://127.0.0.1:8787`, and use:
+Then open the local URL printed by `serve` and set API base URL to `http://127.0.0.1:8787`.
 
-- **Stream Logs** to ingest events
-- **Ask (stream)** for live answer streaming
-- **🎤 Voice input** for speech-to-text question entry
-
-## 3) Deploy Worker
+### 3) Deploy Worker to Cloudflare
 
 ```bash
 cd worker
 npm run deploy
 ```
 
-After deploy, note your Worker URL (for example `https://incident-ai-worker.<subdomain>.workers.dev`).
+This publishes your Worker and Durable Object migration using `worker/wrangler.toml`.
 
-## 4) Deploy frontend to Cloudflare Pages
-
-Use `frontend/` as your Pages project root.
-
-- Build command: _(none)_
-- Output directory: `.`
-
-CLI deploy (used for current live site):
+### 4) Deploy frontend to Cloudflare Pages
 
 ```bash
 npx wrangler pages project create incident-ai-assistant-ui --production-branch main
 npx wrangler pages deploy frontend --project-name incident-ai-assistant-ui
 ```
 
-The default API base in `frontend/index.html` is already set to the deployed Worker URL.
+### 5) Connect GitHub auto-deploy
 
-## 5) GitHub + auto deploy to Cloudflare
+This repo includes `.github/workflows/deploy-cloudflare.yml`, which deploys on every push to `main`.
 
-This repo includes GitHub Actions workflow `.github/workflows/deploy-cloudflare.yml`.
+Add GitHub Actions secrets in your repository:
 
-Add these GitHub repository secrets:
+- `CF_API_TOKEN`
+- `CF_ACCOUNT_ID`
 
-- `CF_API_TOKEN` (Cloudflare API token with Workers + Pages deploy permissions)
-- `CF_ACCOUNT_ID` (your Cloudflare account ID)
+After secrets are added, push to `main` and GitHub Actions will redeploy Worker + Pages.
 
-After that, every push to `main` auto-deploys Worker and Pages.
+## Optional external LLM
 
-## 6) Optional external LLM
+By default, the app uses Workers AI Llama 3.3.
 
-If you want to use an external LLM endpoint instead of Workers AI, set Worker secrets/vars:
+To use an external LLM endpoint instead:
 
 ```bash
 cd worker
@@ -109,17 +124,23 @@ npx wrangler secret put EXTERNAL_LLM_API_KEY
 npx wrangler secret put EXTERNAL_LLM_URL
 ```
 
-When both are configured, the Worker uses external LLM first; otherwise it falls back to Workers AI.
+If both secrets are set, external LLM is used first; otherwise it falls back to Workers AI.
 
-## 7) Push to GitHub
+## Runtime endpoints
 
-```bash
-git init
-git add .
-git commit -m "Initial Cloudflare incident AI assistant"
-git branch -M main
-git remote add origin <your-github-repo-url>
-git push -u origin main
+- Health: `GET /api/health`
+- Ingest logs: `POST /api/incident/:id/logs`
+- Ask question: `POST /api/incident/:id/ask`
+- Ask question (stream): `POST /api/incident/:id/ask-stream`
+- Incident timeline: `GET /api/incident/:id/timeline`
+
+## Example log line format
+
+Use one event per line in the frontend:
+
+```text
+api-gateway ERROR timeout upstream in 2130ms
+payments WARN retrying transaction tokenization
 ```
 
 ## Example questions
